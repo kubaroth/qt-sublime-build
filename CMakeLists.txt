@@ -17,14 +17,18 @@ find_package(Qt5Widgets CONFIG REQUIRED)
 list (APPEND RESOURCES ./src/simpletreemodel.qrc)
 qt5_add_resources (RCC_SOURCES ${RESOURCES})
 
+set(UI src/mainwindow.ui)
+qt5_wrap_ui(UI_HEADERS ${UI})
+
 # Populate a CMake variable with the sources
 set(mv_tree
 	./src/treeitem.cpp
     ./src/treemodel.cpp
+    ./src/mainwindow.cpp
     ./src/main.cpp
 )
 
 # Tell CMake to create the helloworld executable
-add_executable(helloworld ${RCC_SOURCES} ${mv_tree})
+add_executable(helloworld ${RCC_SOURCES} ${UI_HEADERS} ${mv_tree})
 # Use the Widgets module from Qt 5
 target_link_libraries(helloworld Qt5::Widgets)
