@@ -1,7 +1,7 @@
 #include <QApplication>
 #include <QtGui>
 #include <QSplitter>
-#include <QFileSystemModel>
+#include <QDirModel>
 #include <QTreeView>
 #include <QListView>
 
@@ -11,20 +11,28 @@ int main(int argc, char *argv[])
 
     QApplication app(argc, argv);
     QSplitter *splitter = new QSplitter;
-    QFileSystemModel *model = new QFileSystemModel;
-    model->setRootPath(QDir::currentPath());
-    
+    QDirModel *model = new QDirModel;
+     
+    auto dirpath = QString("%1/temp/new_folder1").arg(QDir::homePath());
     /// create two views:
     QTreeView *tree = new QTreeView(splitter);
     tree->setModel(model);
-    tree->setRootIndex(model->index(QDir::currentPath()));
-    
-    QListView *list = new QListView(splitter);
-    list->setModel(model);
-    list->setRootIndex(model->index(QDir::currentPath()));
-    
+    tree->setRootIndex(model->index(dirpath ));
+
     splitter->setWindowTitle("Two views onto the same file system model");
     splitter->show();
+
+    // convention used when dealing with Model Indexes
+    QModelIndex parentIndex = model->index(dirpath);
+    int numRows = model->rowCount(parentIndex);
+    qDebug() << numRows;
     
+    //obtain data from a model
+    for (int row=0; row<numRows; ++row ){
+        QModelIndex index=model->index(row,0, parentIndex);
+        QString text = model->data(index, Qt::DisplayRole).toString();
+        qDebug() << text;
+     }
+
     return app.exec();
 }
