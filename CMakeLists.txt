@@ -22,9 +22,7 @@ qt5_wrap_ui(UI_HEADERS ${UI})
 
 # Populate a CMake variable with the sources
 set(mv_tree
-	./src/treeitem.cpp
-    ./src/treemodel.cpp
-    ./src/mainwindow.cpp
+    # ./src/mainwindow.cpp
     ./src/main.cpp
 )
 
