@@ -1,139 +1,172 @@
 #include "mainwindow.h"
-#include "treemodel.h"
 
-#include <QFile>
+
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
 {
-    setupUi(this);
-
-    QStringList headers;
-    headers << tr("Title") << tr("Description");
-
-    QFile file(":/default.txt");
-    file.open(QIODevice::ReadOnly);
-    TreeModel *model = new TreeModel(headers, file.readAll());
-    file.close();
-
-    view->setModel(model);
-    for (int column = 0; column < model->columnCount(); ++column)
-        view->resizeColumnToContents(column);
-
-    connect(exitAction, &QAction::triggered, qApp, &QCoreApplication::quit);
-
-    connect(view->selectionModel(), &QItemSelectionModel::selectionChanged,
-            this, &MainWindow::updateActions);
-
-    connect(actionsMenu, &QMenu::aboutToShow, this, &MainWindow::updateActions);
-    connect(insertRowAction, &QAction::triggered, this, &MainWindow::insertRow);
-    connect(insertColumnAction, &QAction::triggered, this, &MainWindow::insertColumn);
-    connect(removeRowAction, &QAction::triggered, this, &MainWindow::removeRow);
-    connect(removeColumnAction, &QAction::triggered, this, &MainWindow::removeColumn);
-    connect(insertChildAction, &QAction::triggered, this, &MainWindow::insertChild);
-
-    updateActions();
     
-    keyEnterReceiver *keyPressEater = new keyEnterReceiver();
-    view->installEventFilter(keyPressEater);
+    Q_INIT_RESOURCE(simpletreemodel);
+
+    model = new QDirModel;
+    QSplitter *splitter = new QSplitter();
+    keyEnterReceiver *keyPressEater = new keyEnterReceiver(); // enable press Enter shortcut
+
+    /// create widgets:
+    treeview = new QTreeView(splitter);
+    QLineEdit *lineedit = new QLineEdit(splitter);
+    
+    /// Set attrbutes
+    dirpath = QString("%1/temp/new_folder1").arg(QDir::homePath());  // root location path
+    this->setCentralWidget(splitter);  // fit the size of the spliter into the main window
+    treeview->setModel(model);
+    treeview->setRootIndex(model->index(dirpath));  // sets the top root directory
+    treeview->installEventFilter(keyPressEater);
+    splitter->setWindowTitle("Example");
+    splitter->setOrientation(Qt::Vertical);
+    // FIXME: - fixed hight of linedit
+    //        - make it appear on ctrl-F
+    
+    // connect(exitAction, &QAction::triggered, qApp, &QCoreApplication::quit);
+    connect(lineedit, &QLineEdit::textChanged, this, &MainWindow::hello);
+    connect(lineedit, &QLineEdit::textChanged, this, &MainWindow::search);
+
+    // Resize columns    
+    for (int column = 0; column < model->columnCount(); ++column)
+        treeview->resizeColumnToContents(column);
+
 }
 
-void MainWindow::insertChild()
-{
-    QModelIndex index = view->selectionModel()->currentIndex();
-    QAbstractItemModel *model = view->model();
+void MainWindow::search(const QString inputtext) const {
+    qDebug() << "search: "<< inputtext ;
+    
+    QRegularExpression re(inputtext);
+    
+    // convention used when dealing with Model Indexes
+    QModelIndex parentIndex = model->index(dirpath);
+    int numRows = model->rowCount(parentIndex);
+    
+    treeview->setRowHidden(1,parentIndex,true);
 
-    if (model->columnCount(index) == 0) {
-        if (!model->insertColumn(0, index))
-            return;
-    }
-
-    if (!model->insertRow(0, index))
-        return;
-
-    for (int column = 0; column < model->columnCount(index); ++column) {
-        QModelIndex child = model->index(0, column, index);
-        model->setData(child, QVariant("[No data]"), Qt::EditRole);
-        if (!model->headerData(column, Qt::Horizontal).isValid())
-            model->setHeaderData(column, Qt::Horizontal, QVariant("[No header]"), Qt::EditRole);
-    }
-
-    view->selectionModel()->setCurrentIndex(model->index(0, 0, index),
-                                            QItemSelectionModel::ClearAndSelect);
-    updateActions();
+    //obtain data from a model
+    for (int row=0; row<numRows; ++row ){
+        if (inputtext == ""){
+            treeview->setRowHidden(row,parentIndex,false);
+            continue;
+        }
+        QModelIndex index=model->index(row,0, parentIndex);
+        QString itemtext = model->data(index, Qt::DisplayRole).toString();
+        QRegularExpressionMatch match = re.match(itemtext, 0, QRegularExpression::PartialPreferFirstMatch);
+        if (match.hasMatch()){
+            // qDebug() << "found" << inputtext;
+            treeview->setRowHidden(row,parentIndex,false);
+        }
+        else{
+            treeview->setRowHidden(row,parentIndex,true);
+        }
+     }
+    
 }
 
-bool MainWindow::insertColumn()
-{
-    QAbstractItemModel *model = view->model();
-    int column = view->selectionModel()->currentIndex().column();
 
-    // Insert a column in the parent item.
-    bool changed = model->insertColumn(column + 1);
-    if (changed)
-        model->setHeaderData(column + 1, Qt::Horizontal, QVariant("[No header]"), Qt::EditRole);
+////// Reference:
 
-    updateActions();
+// void MainWindow::insertChild()
+// {
+//     QModelIndex index = view->selectionModel()->currentIndex();
+//     QAbstractItemModel *model = view->model();
 
-    return changed;
-}
+//     if (model->columnCount(index) == 0) {
+//         if (!model->insertColumn(0, index))
+//             return;
+//     }
 
-void MainWindow::insertRow()
-{
-    QModelIndex index = view->selectionModel()->currentIndex();
-    QAbstractItemModel *model = view->model();
+//     if (!model->insertRow(0, index))
+//         return;
 
-    if (!model->insertRow(index.row()+1, index.parent()))
-        return;
+//     for (int column = 0; column < model->columnCount(index); ++column) {
+//         QModelIndex child = model->index(0, column, index);
+//         model->setData(child, QVariant("[No data]"), Qt::EditRole);
+//         if (!model->headerData(column, Qt::Horizontal).isValid())
+//             model->setHeaderData(column, Qt::Horizontal, QVariant("[No header]"), Qt::EditRole);
+//     }
 
-    updateActions();
+//     view->selectionModel()->setCurrentIndex(model->index(0, 0, index),
+//                                             QItemSelectionModel::ClearAndSelect);
+//     updateActions();
+// }
 
-    for (int column = 0; column < model->columnCount(index.parent()); ++column) {
-        QModelIndex child = model->index(index.row()+1, column, index.parent());
-        model->setData(child, QVariant("[No data]"), Qt::EditRole);
-    }
-}
+// bool MainWindow::insertColumn()
+// {
+//     QAbstractItemModel *model = view->model();
+//     int column = view->selectionModel()->currentIndex().column();
 
-bool MainWindow::removeColumn()
-{
-    QAbstractItemModel *model = view->model();
-    int column = view->selectionModel()->currentIndex().column();
+//     // Insert a column in the parent item.
+//     bool changed = model->insertColumn(column + 1);
+//     if (changed)
+//         model->setHeaderData(column + 1, Qt::Horizontal, QVariant("[No header]"), Qt::EditRole);
 
-    // Insert columns in each child of the parent item.
-    bool changed = model->removeColumn(column);
+//     updateActions();
 
-    if (changed)
-        updateActions();
+//     return changed;
+// }
 
-    return changed;
-}
+// void MainWindow::insertRow()
+// {
+//     QModelIndex index = view->selectionModel()->currentIndex();
+//     QAbstractItemModel *model = view->model();
 
-void MainWindow::removeRow()
-{
-    QModelIndex index = view->selectionModel()->currentIndex();
-    QAbstractItemModel *model = view->model();
-    if (model->removeRow(index.row(), index.parent()))
-        updateActions();
-}
+//     if (!model->insertRow(index.row()+1, index.parent()))
+//         return;
 
-void MainWindow::updateActions()
-{
-    bool hasSelection = !view->selectionModel()->selection().isEmpty();
-    removeRowAction->setEnabled(hasSelection);
-    removeColumnAction->setEnabled(hasSelection);
+//     updateActions();
 
-    bool hasCurrent = view->selectionModel()->currentIndex().isValid();
-    insertRowAction->setEnabled(hasCurrent);
-    insertColumnAction->setEnabled(hasCurrent);
+//     for (int column = 0; column < model->columnCount(index.parent()); ++column) {
+//         QModelIndex child = model->index(index.row()+1, column, index.parent());
+//         model->setData(child, QVariant("[No data]"), Qt::EditRole);
+//     }
+// }
 
-    if (hasCurrent) {
-        view->closePersistentEditor(view->selectionModel()->currentIndex());
+// bool MainWindow::removeColumn()
+// {
+//     QAbstractItemModel *model = view->model();
+//     int column = view->selectionModel()->currentIndex().column();
 
-        int row = view->selectionModel()->currentIndex().row();
-        int column = view->selectionModel()->currentIndex().column();
-        if (view->selectionModel()->currentIndex().parent().isValid())
-            statusBar()->showMessage(tr("Position: (%1,%2)").arg(row).arg(column));
-        else
-            statusBar()->showMessage(tr("Position: (%1,%2) in top level").arg(row).arg(column));
-    }
-}
+//     // Insert columns in each child of the parent item.
+//     bool changed = model->removeColumn(column);
+
+//     if (changed)
+//         updateActions();
+
+//     return changed;
+// }
+
+// void MainWindow::removeRow()
+// {
+//     QModelIndex index = view->selectionModel()->currentIndex();
+//     QAbstractItemModel *model = view->model();
+//     if (model->removeRow(index.row(), index.parent()))
+//         updateActions();
+// }
+
+// void MainWindow::updateActions()
+// {
+//     bool hasSelection = !view->selectionModel()->selection().isEmpty();
+//     removeRowAction->setEnabled(hasSelection);
+//     removeColumnAction->setEnabled(hasSelection);
+
+//     bool hasCurrent = view->selectionModel()->currentIndex().isValid();
+//     insertRowAction->setEnabled(hasCurrent);
+//     insertColumnAction->setEnabled(hasCurrent);
+
+//     if (hasCurrent) {
+//         view->closePersistentEditor(view->selectionModel()->currentIndex());
+
+//         int row = view->selectionModel()->currentIndex().row();
+//         int column = view->selectionModel()->currentIndex().column();
+//         if (view->selectionModel()->currentIndex().parent().isValid())
+//             statusBar()->showMessage(tr("Position: (%1,%2)").arg(row).arg(column));
+//         else
+//             statusBar()->showMessage(tr("Position: (%1,%2) in top level").arg(row).arg(column));
+//     }
+// }
