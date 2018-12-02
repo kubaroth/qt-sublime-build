@@ -5,6 +5,10 @@ TreeItem::TreeItem(const QList<QVariant> &data, TreeItem *parent)
 {
     m_parentItem = parent;
     m_itemData = data;
+    // this->isEditable();
+    // QFlags<Qt::ItemFlag> flags = this->flags();
+    // flags += Qt::ItemIsEditable;  
+    // this->setFlags(flags);
 }
 
 TreeItem::~TreeItem()

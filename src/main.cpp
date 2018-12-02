@@ -15,9 +15,14 @@ int main(int argc, char *argv[])
     file.open(QIODevice::ReadOnly);
     TreeModel model(file.readAll());
     file.close();
+    
 
     QTreeView view;
     view.setModel(&model);
+
+    keyEnterReceiver *keyPressEater = new keyEnterReceiver();
+    view.installEventFilter(keyPressEater);
+
     view.setWindowTitle(QObject::tr("Simple Tree Model"));
     view.show();
     return app.exec();

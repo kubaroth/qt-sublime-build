@@ -6,8 +6,7 @@
 #include <QStringList>
 
 
-class TreeItem
-{
+class TreeItem{
 public:
     explicit TreeItem(const QList<QVariant> &data, TreeItem *parentItem = 0);
     ~TreeItem();
@@ -22,8 +21,7 @@ public:
     TreeItem *parentItem();
 
 private:
-    QList<TreeItem*> m_childItems;
+    QList<TreeItem*> m_childItems; // stores all children - used for cleanup
     QList<QVariant> m_itemData;
     TreeItem *m_parentItem;
 };
-
