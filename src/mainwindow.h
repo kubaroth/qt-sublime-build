@@ -4,11 +4,24 @@
 #include <QModelIndex>
 #include <QtGui>
 #include <QSplitter>
-#include <QDirModel>
+#include <QStandardItemModel>
 #include <QTreeView>
 #include <QListView>
 #include <QLineEdit>
 #include <QFile>
+
+
+#include <QVariant>
+#include <QMetaType>
+
+
+struct Block{
+    int x;
+    float y;
+    QString name;
+};
+Q_DECLARE_METATYPE(Block);
+
 
 class MainWindow : public QMainWindow
 {
@@ -31,7 +44,7 @@ public:
 //     void removeRow();
 
 private:
-	QDirModel *model;
+	QStandardItemModel *model;
 	QTreeView *treeview;
 	QString dirpath;
     

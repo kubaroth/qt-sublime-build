@@ -5,47 +5,68 @@
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
 {
-    
+
     Q_INIT_RESOURCE(simpletreemodel);
 
-    model = new QDirModel;
-    QSplitter *splitter = new QSplitter();
-    keyEnterReceiver *keyPressEater = new keyEnterReceiver(); // enable press Enter shortcut
+    model = new QStandardItemModel;
 
     /// create widgets:
+    QSplitter *splitter = new QSplitter();
     treeview = new QTreeView(splitter);
     QLineEdit *lineedit = new QLineEdit(splitter);
-    
+    keyEnterReceiver *keyPressEater = new keyEnterReceiver(); // enable press Enter shortcut
+
     /// Set attrbutes
-    dirpath = QString("%1/temp/new_folder1").arg(QDir::homePath());  // root location path
     this->setCentralWidget(splitter);  // fit the size of the spliter into the main window
     treeview->setModel(model);
-    treeview->setRootIndex(model->index(dirpath));  // sets the top root directory
-    treeview->installEventFilter(keyPressEater);
+    // treeview->installEventFilter(keyPressEater);
+    lineedit->installEventFilter(keyPressEater);
+
     splitter->setWindowTitle("Example");
     splitter->setOrientation(Qt::Vertical);
     // FIXME: - fixed hight of linedit
     //        - make it appear on ctrl-F
-    
+
     // connect(exitAction, &QAction::triggered, qApp, &QCoreApplication::quit);
     connect(lineedit, &QLineEdit::textChanged, this, &MainWindow::hello);
     connect(lineedit, &QLineEdit::textChanged, this, &MainWindow::search);
 
-    // Resize columns    
-    for (int column = 0; column < model->columnCount(); ++column)
-        treeview->resizeColumnToContents(column);
+
+
+    /// Add items to a tree 
+    QList<QString> names = {"aaa", "aac", "bbb", "ccc"};
+
+    for (auto name : names){
+        Block b = {1, 2.0, name};
+        QVariant var1;
+        var1.setValue(b);
+        auto item = new QStandardItem(b.name);
+        item->setData(var1);
+        model->appendRow(item);
+    }   
+
+
+    // parents.last()->appendChild(new TreeItem(columnData, parents.last()));
+
+    treeview->setDragDropMode(QAbstractItemView::InternalMove);
+    treeview->setSelectionMode(QAbstractItemView::ExtendedSelection);
+    treeview->setDragEnabled(true);
+    treeview->setAcceptDrops(true);
+    treeview->setDropIndicatorShown(true);
 
 }
 
 void MainWindow::search(const QString inputtext) const {
-    qDebug() << "search: "<< inputtext ;
-    
+    qDebug() << "search: "<< inputtext;
+
     QRegularExpression re(inputtext);
-    
+
     // convention used when dealing with Model Indexes
-    QModelIndex parentIndex = model->index(dirpath);
+    QStandardItem  *parentItem = model->invisibleRootItem();
+    QModelIndex  parentIndex = parentItem->index();
     int numRows = model->rowCount(parentIndex);
-    
+    qDebug() << numRows;
+
     treeview->setRowHidden(1,parentIndex,true);
 
     //obtain data from a model
@@ -65,7 +86,7 @@ void MainWindow::search(const QString inputtext) const {
             treeview->setRowHidden(row,parentIndex,true);
         }
      }
-    
+
 }
 
 
